@@ -20,6 +20,7 @@
   var trainTime;
   var trainMins;
   var countTrain=0;
+  var DBeachTrain;
   
  $('#submit').on('click', function(event){
  
@@ -36,11 +37,15 @@
      destination: destination,
      frecuency: frecuency,
      time: time,
+     
    };
 
-   database.ref().child('trains').push(newTrain);
-
-  // Clean entries
+   var DBtrainObj = database.ref().child('trains');
+    DBeachTrain = DBtrainObj.child(name);
+    DBeachTrain.set(newTrain);
+   
+ 
+  // Clean entries            
 
     $('#input-name').val("");
     $('#input-destination').val("");
@@ -48,12 +53,14 @@
     $('#input-time').val("");
 });// Submit button
 
-   database.ref().child('trains').on("child_added", snapshot =>  {
+   //database.ref().child('trains').on("child_added", snapshot =>  {
+    database.ref().child('trains').on("child_added", snapshot =>  {
 
         trainName = snapshot.val().name;
         trainDestination = snapshot.val().destination;
         trainFrecuency = snapshot.val().frecuency;
         trainTime = snapshot.val().time;
+        trainId = snapshot.key;
 
         var now = moment();
         // Calculate minutes passed from Train start tiem
@@ -84,7 +91,7 @@
 
  
     //create a table row
-    var tableRow = $("<tr>").append(
+    var tableRow = $("<tr>").attr('data-id',trainId).append(
       $("<th>").attr('contenidoEditable', false).text(trainName),
       $("<th>").attr('contenidoEditable', false).text(trainDestination),
       $("<th>").attr('contenidoEditable', false).text(trainFrecuency),
@@ -93,42 +100,47 @@
       $("<th>").append(pencilEdit, menosRemove)
  
       );
-     
-    
+         
     $('tbody').append(tableRow);
   }  // updateTrainTimes
 
-function readDB(){
+  // Function to update table every minute
+      function readDB(){
 
- database.ref().child('trains').once('value', function(snapshot){
-   snapshot.forEach(function(childSnapshot){
-    trainName = childSnapshot.val().name;
-    trainDestination = childSnapshot.val().destination;
-    trainFrecuency = childSnapshot.val().frecuency;
-    trainTime = childSnapshot.val().time;
+        database.ref().child('trains').once('value', function(snapshot){
+        snapshot.forEach(function(childSnapshot){
+          trainName = childSnapshot.val().name;
+          trainDestination = childSnapshot.val().destination;
+          trainFrecuency = childSnapshot.val().frecuency;
+          trainTime = childSnapshot.val().time;
 
-    var now = moment();
-    // Calculate minutes passed from Train start tiem
+          var now = moment();
+          // Calculate minutes passed from Train start tiem
 
-    var firstTimeConverted = moment(trainTime, "HH:mm").subtract(1, "years");
+          var firstTimeConverted = moment(trainTime, "HH:mm").subtract(1, "years");
 
-    trainMins = now.diff(moment(firstTimeConverted),'minutes');
+          trainMins = now.diff(moment(firstTimeConverted),'minutes');
 
-  
-    // Calculate time
-   
-  updateTrainTimes ();
+        
+          // Calculate time
+        
+        updateTrainTimes ();
 
-   });
- });
+        });
+      });
 
-}
+  } //Function readDB
+
+$(document).on("click", "i.fa.fa-minus-square", function(e) {
+  $(this).closest("tr").remove().draw();
+})
 
 $(document).on('click', 'i.fa.fa-pencil-square', function(e){
- 
+
   $(this).removeClass().addClass('fa fa-envelope-o');
   var $row = $(this).closest('tr').off('mousedown');
-  var $ths = $row.find('th').not(':last').not(':eq(4)').not(':eq(3)');
+  trainId = $(this).closest('tr').attr('data-id');
+  var $ths = $row.find('th').not(':first').not(':last').not(':eq(2)').not(':eq(-1)');
 
   $.each($ths, function(i, el){
     var txt = $(this).text();
@@ -136,43 +148,58 @@ $(document).on('click', 'i.fa.fa-pencil-square', function(e){
   });
 });
   
-$(document).on("click", "i.fa.fa-minus-square", function(e) {
-  $(this).closest("tr").remove().draw();
-})
-
-$(document).on('click', "i.fa.fa-envelope-o", function(e) {
+      $(document).on('click', "i.fa.fa-envelope-o", function(e) {
+        var tableId = $(this).closest("tr").attr('id');
+        console.log(tableId);
+        $(this).removeClass().addClass("fa fa-pencil-square");
+        var $row = $(this).closest("tr");
         
-  $(this).removeClass().addClass("fa fa-pencil-square");
-  var $row = $(this).closest("tr");
-  var $ths = $row.find("th").not(':last').not(':eq(4)').not(':eq(3)');
+        var $ths = $row.find("th").not(':first').not(':last').not(':eq(2)').not(':eq(-1)');
+        
+        $.each($ths, function() {
+          var txt = $(this).find("input").val();
+          $(this).closest("tr").remove();
+         $(this).html(txt);
+          
+        });
+        
+        var newTrain = {
+          
+          
+          destination: $ths.eq(0).text(),
+          frecuency: $ths.eq(1).text(),
+          
+        };
   
-  $.each($ths, function(i, el) {
-    var txt = $(this).find("input").val()
-    $(this).html(txt);
-  });
-});
-
-database.ref().child('trains').on("child_changed", snapshot =>  {
-
-  trainName = snapshot.val().name;
-  trainDestination = snapshot.val().destination;
-  trainFrecuency = snapshot.val().frecuency;
-  trainTime = snapshot.val().time;
-
-  var now = moment();
-  // Calculate minutes passed from Train start tiem
-
-  var firstTimeConverted = moment(trainTime, "HH:mm").subtract(1, "years");
-
-  trainMins = now.diff(moment(firstTimeConverted),'minutes');
-
-  // Calculate time
  
-updateTrainTimes ();
+      database.ref().child('trains/' + trainId).update(newTrain);
+      console.log('imhere' + ' ' + trainId);
+
+      });
+
+      database.ref().child('trains').on("child_changed", snapshot =>  {
+
+        trainName = snapshot.val().name;
+        trainDestination = snapshot.val().destination;
+        trainFrecuency = snapshot.val().frecuency;
+        trainTime = snapshot.val().time;
+
+        var now = moment();
+        // Calculate minutes passed from Train start tiem
+
+        var firstTimeConverted = moment(trainTime, "HH:mm").subtract(1, "years");
+
+        trainMins = now.diff(moment(firstTimeConverted),'minutes');
+
+        // Calculate time
+      
+      updateTrainTimes ();
 
 
-});
+      });
 
-setInterval(function(){
-  $('tbody').empty();
-  readDB()}, 60000);
+
+
+      setInterval(function(){
+        $('tbody').empty();
+        readDB()}, 60000);

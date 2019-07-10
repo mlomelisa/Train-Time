@@ -21,10 +21,16 @@
   var trainMins;
   var countTrain=0;
   var DBeachTrain;
+
+  validateForm();
   
  $('#submit').on('click', function(event){
  
  event.preventDefault();
+
+  if(isValid){
+
+ 
 
   var name = $('#input-name').val().trim();
   var destination = $('#input-destination').val().trim();
@@ -44,16 +50,29 @@
     DBeachTrain = DBtrainObj.child(name);
     DBeachTrain.set(newTrain);
    
- 
+    
   // Clean entries            
 
     $('#input-name').val("");
     $('#input-destination').val("");
     $('#input-frecuency').val("");
     $('#input-time').val("");
+  }
+  else{
+    alert('Missing Inputs')
+  }
 });// Submit button
 
-   //database.ref().child('trains').on("child_added", snapshot =>  {
+// Function to verify all forms are filled
+function validateForm() {
+  var isValid = true;
+  $('.form-control').each(function() {
+    if ( $(this).val() === '' )
+        isValid = false;
+        console.log('isValid')
+  });
+  return isValid;
+}
     database.ref().child('trains').on("child_added", snapshot =>  {
 
         trainName = snapshot.val().name;
@@ -132,9 +151,14 @@
   } //Function readDB
 
 $(document).on("click", "i.fa.fa-minus-square", function(e) {
+  trainId = $(this).closest('tr').attr('data-id');
+  database.ref().child('trains/' + trainId).remove();
   $(this).closest("tr").remove().draw();
+  
+
 })
 
+// Function to set en Edit mode
 $(document).on('click', 'i.fa.fa-pencil-square', function(e){
 
   $(this).removeClass().addClass('fa fa-envelope-o');
@@ -148,6 +172,7 @@ $(document).on('click', 'i.fa.fa-pencil-square', function(e){
   });
 });
   
+// Function to Save changes and update to table with new values
       $(document).on('click', "i.fa.fa-envelope-o", function(e) {
         var tableId = $(this).closest("tr").attr('id');
         console.log(tableId);
@@ -164,8 +189,7 @@ $(document).on('click', 'i.fa.fa-pencil-square', function(e){
         });
         
         var newTrain = {
-          
-          
+                 
           destination: $ths.eq(0).text(),
           frecuency: $ths.eq(1).text(),
           
@@ -173,9 +197,12 @@ $(document).on('click', 'i.fa.fa-pencil-square', function(e){
   
  
       database.ref().child('trains/' + trainId).update(newTrain);
-      console.log('imhere' + ' ' + trainId);
+      $('tbody').empty();
+      readDB();
 
       });
+
+      //Function to update Firebase after a change
 
       database.ref().child('trains').on("child_changed", snapshot =>  {
 

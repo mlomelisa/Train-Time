@@ -24,11 +24,11 @@
 
   validateForm();
   
- $('#submit').on('click', function(event){
+ $('#submit').on('click', function(event, isValid){
  
  event.preventDefault();
 
-  if(isValid){
+  if(!isValid){
 
  
 
